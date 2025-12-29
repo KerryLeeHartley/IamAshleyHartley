@@ -2,70 +2,67 @@
  * ═══════════════════════════════════════════════════════════════
  * ANALYTICS WRAPPER - LOADS ALL TRACKING SCRIPTS
  * ═══════════════════════════════════════════════════════════════
- * 
+ *
  * This component loads all the analytics tracking scripts:
  * - Google Analytics 4 (GA4)
  * - Microsoft Clarity
  * - TikTok Pixel
  * - Meta Pixel (Facebook/Instagram)
- * 
+ *
  * It's loaded once in layout.tsx and runs on every page.
- * 
+ *
+ * UPDATED: Wrapped in Suspense to fix Next.js 14 build error
+ *
  * ═══════════════════════════════════════════════════════════════
  */
 
-'use client'
+"use client";
 
-import Script from 'next/script'
-import { useEffect } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
-import { trackPageView } from '@/lib/analytics'
+import Script from "next/script";
+import { useEffect, Suspense } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { trackPageView } from "@/lib/analytics";
+
+// Separate component for tracking (uses useSearchParams)
+function AnalyticsTracker() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const pageTitle = pathname === "/" ? "Homepage" : pathname.slice(1);
+    trackPageView(pageTitle);
+  }, [pathname, searchParams]);
+
+  return null;
+}
 
 export default function AnalyticsWrapper() {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  
   // ─────────────────────────────────────────────────────────────
   // GET ENVIRONMENT VARIABLES
   // ─────────────────────────────────────────────────────────────
-  const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
-  const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID
-  const TIKTOK_PIXEL_ID = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID
-  const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
-  
-  // ─────────────────────────────────────────────────────────────
-  // TRACK PAGE VIEWS ON ROUTE CHANGES
-  // ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    // Get page title from pathname
-    const pageTitle = pathname === '/' ? 'Homepage' : pathname.slice(1)
-    
-    // Track page view
-    trackPageView(pageTitle)
-  }, [pathname, searchParams])
-  
+  const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+  const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
+  const TIKTOK_PIXEL_ID = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID;
+  const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+
   return (
     <>
+      {/* Track page views with Suspense boundary */}
+      <Suspense fallback={null}>
+        <AnalyticsTracker />
+      </Suspense>
+
       {/* ═══════════════════════════════════════════════════════
           GOOGLE ANALYTICS 4 (GA4)
           ═══════════════════════════════════════════════════════
-          
-          Tracks:
-          - Demographics (age, gender, location)
-          - Device types (mobile, desktop, tablet)
-          - Traffic sources (where visitors come from)
-          - Page views and time on site
-          - Custom events (clicks, form submissions, etc.)
       */}
       {GA_MEASUREMENT_ID && (
         <>
-          {/* Load GA4 script */}
           <Script
             src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
             strategy="afterInteractive"
           />
-          
-          {/* Initialize GA4 */}
+
           <Script id="google-analytics" strategy="afterInteractive">
             {`
               window.dataLayer = window.dataLayer || [];
@@ -80,19 +77,10 @@ export default function AnalyticsWrapper() {
           </Script>
         </>
       )}
-      
+
       {/* ═══════════════════════════════════════════════════════
           MICROSOFT CLARITY
           ═══════════════════════════════════════════════════════
-          
-          Tracks:
-          - Session recordings (watch how users navigate)
-          - Heatmaps (see where users click)
-          - Scroll depth (how far they scroll)
-          - Rage clicks (frustration points)
-          - Dead clicks (clicking non-functional elements)
-          
-          This is GOLD for understanding user behavior!
       */}
       {CLARITY_PROJECT_ID && (
         <Script id="microsoft-clarity" strategy="afterInteractive">
@@ -105,22 +93,10 @@ export default function AnalyticsWrapper() {
           `}
         </Script>
       )}
-      
+
       {/* ═══════════════════════════════════════════════════════
           TIKTOK PIXEL
           ═══════════════════════════════════════════════════════
-          
-          Tracks:
-          - Which TikTok videos drive traffic
-          - User behavior on site after clicking from TikTok
-          - Conversion events (email signups, purchases)
-          
-          Creates:
-          - Custom audiences (retarget website visitors on TikTok)
-          - Lookalike audiences (find similar people)
-          - Conversion tracking for TikTok ads
-          
-          This is KEY for growing Samiya's TikTok business!
       */}
       {TIKTOK_PIXEL_ID && (
         <Script id="tiktok-pixel" strategy="afterInteractive">
@@ -142,22 +118,10 @@ export default function AnalyticsWrapper() {
           `}
         </Script>
       )}
-      
+
       {/* ═══════════════════════════════════════════════════════
           META PIXEL (Facebook/Instagram)
           ═══════════════════════════════════════════════════════
-          
-          Tracks:
-          - Instagram traffic (if Samiya promotes there)
-          - User behavior from Facebook/Instagram
-          - Conversion events
-          
-          Creates:
-          - Custom audiences for Facebook/Instagram ads
-          - Retargeting campaigns
-          - Lookalike audiences
-          
-          Great for when Samiya wants to run Instagram/Facebook ads!
       */}
       {META_PIXEL_ID && (
         <Script id="meta-pixel" strategy="afterInteractive">
@@ -175,7 +139,7 @@ export default function AnalyticsWrapper() {
           `}
         </Script>
       )}
-      
+
       {/* Warning if analytics not configured */}
       {(!GA_MEASUREMENT_ID || !CLARITY_PROJECT_ID) && (
         <Script id="analytics-warning" strategy="afterInteractive">
@@ -185,38 +149,5 @@ export default function AnalyticsWrapper() {
         </Script>
       )}
     </>
-  )
+  );
 }
-
-/*
- * ═══════════════════════════════════════════════════════════════
- * SETUP CHECKLIST:
- * ═══════════════════════════════════════════════════════════════
- * 
- * ✅ Google Analytics 4:
- *    1. Go to https://analytics.google.com/
- *    2. Create property
- *    3. Get Measurement ID (G-XXXXXXXXXX)
- *    4. Add to .env.local: NEXT_PUBLIC_GA_MEASUREMENT_ID
- * 
- * ✅ Microsoft Clarity:
- *    1. Go to https://clarity.microsoft.com/
- *    2. Create project
- *    3. Get Project ID
- *    4. Add to .env.local: NEXT_PUBLIC_CLARITY_PROJECT_ID
- * 
- * ✅ TikTok Pixel (IMPORTANT FOR SAMIYA!):
- *    1. Go to TikTok Ads Manager
- *    2. Assets > Events > Web Events
- *    3. Create pixel
- *    4. Get Pixel ID
- *    5. Add to .env.local: NEXT_PUBLIC_TIKTOK_PIXEL_ID
- * 
- * ✅ Meta Pixel (Optional for now):
- *    1. Go to Facebook Business Manager
- *    2. Business Settings > Data Sources > Pixels
- *    3. Get Pixel ID
- *    4. Add to .env.local: NEXT_PUBLIC_META_PIXEL_ID
- * 
- * ═══════════════════════════════════════════════════════════════
- */
