@@ -13,7 +13,7 @@
  *
  * It's loaded once in layout.tsx and runs on every page.
  *
- * UPDATED: Fixed variable names to match .env.local
+ * UPDATED: Fixed double page view firing issue
  *
  * ═══════════════════════════════════════════════════════════════
  */
@@ -40,7 +40,7 @@ function AnalyticsTracker() {
 
 export default function AnalyticsWrapper() {
   // ─────────────────────────────────────────────────────────────
-  // GET ENVIRONMENT VARIABLES (UPDATED NAMES!)
+  // GET ENVIRONMENT VARIABLES
   // ─────────────────────────────────────────────────────────────
   const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_ID;
   const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_ID;
@@ -75,7 +75,7 @@ export default function AnalyticsWrapper() {
               
               gtag('config', '${GA_MEASUREMENT_ID}', {
                 page_path: window.location.pathname,
-                send_page_view: true
+                send_page_view: false
               });
             `}
           </Script>
