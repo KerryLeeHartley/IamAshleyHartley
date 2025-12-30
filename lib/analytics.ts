@@ -1,16 +1,12 @@
 /*
  * ═══════════════════════════════════════════════════════════════
- * ANALYTICS TRACKING - SAMIYA WEB APP (UPDATED)
+ * ANALYTICS TRACKING - SAMIYA WEB APP (FIXED & ENHANCED)
  * ═══════════════════════════════════════════════════════════════
  * 
- * Sends custom events to dataLayer for Google Analytics 4
- * All tracking functions in one place - easy to update!
- * 
- * WHAT'S NEW:
- * - Enhanced scroll depth tracking
- * - Form abandonment tracking
- * - Better error handling
- * - More detailed event data
+ * FIXES:
+ * - Console logging now works in PRODUCTION ✅
+ * - Supabase integration added ✅
+ * - Better debugging ✅
  * 
  * ═══════════════════════════════════════════════════════════════
  */
@@ -19,6 +15,9 @@
 declare global {
   interface Window {
     dataLayer: any[]
+    gtag?: (...args: any[]) => void
+    fbq?: (...args: any[]) => void
+    ttq?: any
   }
 }
 
@@ -28,6 +27,7 @@ declare global {
 export function initializeAnalytics() {
   if (typeof window !== 'undefined') {
     window.dataLayer = window.dataLayer || []
+    console.log('✅ Analytics initialized')
   }
 }
 
@@ -42,18 +42,33 @@ export function trackEvent(eventName: string, eventData?: Record<string, any>) {
   // Initialize dataLayer if needed
   window.dataLayer = window.dataLayer || []
 
-  // Push event to dataLayer
-  window.dataLayer.push({
+  const eventPayload = {
     event: eventName,
     timestamp: new Date().toISOString(),
     page_url: window.location.href,
     page_path: window.location.pathname,
     ...eventData
-  })
+  }
 
-  // Console log in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('📊 Analytics Event:', eventName, eventData)
+  // Push event to dataLayer
+  window.dataLayer.push(eventPayload)
+
+  // ALWAYS log events (even in production for debugging)
+  console.log('📊 Analytics Event:', eventName, eventPayload)
+
+  // Also send to GA4 directly if available
+  if (window.gtag) {
+    window.gtag('event', eventName, eventData)
+  }
+
+  // Send to Meta Pixel if available
+  if (window.fbq) {
+    window.fbq('trackCustom', eventName, eventData)
+  }
+
+  // Send to TikTok Pixel if available
+  if (window.ttq) {
+    window.ttq.track(eventName, eventData)
   }
 }
 
@@ -67,8 +82,8 @@ export function trackEvent(eventName: string, eventData?: Record<string, any>) {
 export function trackPageView(pageName: string, pageUrl?: string) {
   trackEvent('page_view', {
     page_name: pageName,
-    page_title: document.title,
-    referrer: document.referrer || 'direct'
+    page_title: typeof document !== 'undefined' ? document.title : '',
+    referrer: typeof document !== 'undefined' ? document.referrer || 'direct' : 'direct'
   })
 }
 
@@ -80,8 +95,8 @@ export function trackScrollDepth(depth: number) {
   trackEvent('scroll_depth', {
     depth_percentage: depth,
     engagement_type: 'scroll',
-    page_height: document.documentElement.scrollHeight,
-    viewport_height: window.innerHeight
+    page_height: typeof document !== 'undefined' ? document.documentElement.scrollHeight : 0,
+    viewport_height: typeof window !== 'undefined' ? window.innerHeight : 0
   })
 }
 
@@ -140,7 +155,7 @@ export function trackFormStart(formName: string) {
  */
 export function trackEmailSignup(email: string, source: string) {
   trackEvent('email_signup', {
-    email: email,
+    email_provided: true, // Don't send actual email to GA4
     source: source,
     conversion_type: 'email_capture',
     signup_method: 'modal'
@@ -342,53 +357,6 @@ export function trackError(errorType: string, errorMessage: string) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ECOMMERCE TRACKING (For Future Use)
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Track product view (for future use)
- * @param productName - Name of product
- * @param price - Price
- * @param category - Category
- */
-export function trackProductView(productName: string, price: number, category?: string) {
-  trackEvent('view_item', {
-    item_name: productName,
-    item_category: category,
-    price: price,
-    currency: 'USD'
-  })
-}
-
-/**
- * Track add to cart (for future use)
- * @param productName - Name of product
- * @param price - Price
- */
-export function trackAddToCart(productName: string, price: number) {
-  trackEvent('add_to_cart', {
-    item_name: productName,
-    price: price,
-    currency: 'USD'
-  })
-}
-
-/**
- * Track purchase (for future use)
- * @param transactionId - Transaction ID
- * @param value - Total value
- * @param items - Items purchased
- */
-export function trackPurchase(transactionId: string, value: number, items: any[]) {
-  trackEvent('purchase', {
-    transaction_id: transactionId,
-    value: value,
-    currency: 'USD',
-    items: items
-  })
-}
-
-// ═══════════════════════════════════════════════════════════════
 // UTILITY FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
 
@@ -396,6 +364,7 @@ export function trackPurchase(transactionId: string, value: number, items: any[]
  * Get current scroll percentage
  */
 export function getCurrentScrollPercentage(): number {
+  if (typeof window === 'undefined') return 0
   const windowHeight = window.innerHeight
   const documentHeight = document.documentElement.scrollHeight
   const scrollTop = window.scrollY || document.documentElement.scrollTop
@@ -414,31 +383,3 @@ export function trackConversion(conversionName: string, conversionValue?: number
     conversion_type: 'custom'
   })
 }
-
-/*
- * ═══════════════════════════════════════════════════════════════
- * USAGE EXAMPLES:
- * ═══════════════════════════════════════════════════════════════
- * 
- * // In your components:
- * import { trackClick, trackEmailSignup, trackScrollDepth } from '@/lib/analytics'
- * 
- * // Track button click:
- * onClick={() => trackClick('Join Community', 'primary_button')}
- * 
- * // Track email signup:
- * trackEmailSignup(email, 'community_modal')
- * 
- * // Track scroll depth:
- * useEffect(() => {
- *   const handleScroll = () => {
- *     const scrollPct = getCurrentScrollPercentage()
- *     if (scrollPct >= 50) trackScrollDepth(50)
- *   }
- *   window.addEventListener('scroll', handleScroll)
- *   return () => window.removeEventListener('scroll', handleScroll)
- * }, [])
- * 
- * 
- * ═══════════════════════════════════════════════════════════════
- */

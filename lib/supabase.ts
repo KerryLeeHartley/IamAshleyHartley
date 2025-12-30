@@ -27,14 +27,12 @@ import { createClient } from '@supabase/supabase-js'
 // ─────────────────────────────────────────────────────────────
 // ENVIRONMENT VARIABLES
 // ─────────────────────────────────────────────────────────────
-// These come from .env.local file
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 // ─────────────────────────────────────────────────────────────
 // VALIDATE ENVIRONMENT VARIABLES
 // ─────────────────────────────────────────────────────────────
-// Make sure the developer set up their .env.local file
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(`
     ⚠️  SUPABASE NOT CONFIGURED!
@@ -50,26 +48,23 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // ─────────────────────────────────────────────────────────────
 // CREATE SUPABASE CLIENT
 // ─────────────────────────────────────────────────────────────
-// This is the main object we'll use to interact with the database
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Auth configuration (if we add user login later)
     persistSession: true,
     autoRefreshToken: true,
   },
 })
 
-// ─────────────────────────────────────────────────────────────
-// HELPER FUNCTIONS FOR DATABASE OPERATIONS
-// ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// SUBSCRIBERS (PRIVATE - NOT DISPLAYED PUBLICLY)
+// ═══════════════════════════════════════════════════════════════
 
 /**
  * Save a new email subscriber to the database
- * 
  * @param email - User's email address
- * @param source - Where they signed up (e.g., 'homepage', 'popup')
+ * @param source - Where they signed up (e.g., 'homepage', 'community_modal')
  * @param utmData - UTM parameters from URL (for tracking campaign performance)
- * @returns The saved subscriber data or error
+ * @returns Object with success status and data/error
  */
 export async function saveSubscriber(
   email: string,
@@ -81,18 +76,25 @@ export async function saveSubscriber(
   }
 ) {
   try {
-    // Check if email already exists (prevent duplicates)
+    console.log('📧 Saving subscriber:', email, 'from:', source)
+
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim()
+
+    // Check if email already exists
     const { data: existing, error: checkError } = await supabase
       .from('subscribers')
       .select('email')
-      .eq('email', email)
-      .single()
+      .eq('email', normalizedEmail)
+      .maybeSingle()
 
-    // If email exists, return message
     if (existing) {
+      console.log('⚠️ Email already subscribed')
       return {
+        success: false,
         data: null,
-        error: new Error('Email already subscribed!'),
+        error: 'Email already subscribed!',
+        isDuplicate: true
       }
     }
 
@@ -101,7 +103,7 @@ export async function saveSubscriber(
       .from('subscribers')
       .insert([
         {
-          email,
+          email: normalizedEmail,
           source,
           utm_source: utmData?.utm_source || null,
           utm_campaign: utmData?.utm_campaign || null,
@@ -112,24 +114,31 @@ export async function saveSubscriber(
       .single()
 
     if (error) {
-      console.error('Error saving subscriber:', error)
-      return { data: null, error }
+      console.error('❌ Error saving subscriber:', error)
+      return { success: false, data: null, error: error.message }
     }
 
-    return { data, error: null }
-  } catch (error) {
-    console.error('Unexpected error:', error)
-    return { data: null, error: error as Error }
+    console.log('✅ Subscriber saved:', data)
+    return { success: true, data, error: null }
+  } catch (error: any) {
+    console.error('❌ Unexpected error:', error)
+    return { success: false, data: null, error: error.message }
   }
 }
 
+// NOTE: Subscriber count intentionally NOT exposed publicly
+// Only accessible via Supabase dashboard for privacy
+
+// ═══════════════════════════════════════════════════════════════
+// ANALYTICS EVENTS
+// ═══════════════════════════════════════════════════════════════
+
 /**
  * Track a custom analytics event in the database
- * 
- * @param eventName - Name of the event (e.g., 'video_click', 'pillar_click')
+ * @param eventName - Name of the event (e.g., 'video_click', 'button_click')
  * @param eventData - Additional data about the event
  * @param sessionId - Session ID to group events from same visit
- * @returns The saved event or error
+ * @returns Object with success status and data/error
  */
 export async function trackDatabaseEvent(
   eventName: string,
@@ -151,46 +160,26 @@ export async function trackDatabaseEvent(
 
     if (error) {
       console.error('Error tracking event:', error)
-      return { data: null, error }
+      return { success: false, data: null, error: error.message }
     }
 
-    return { data, error: null }
-  } catch (error) {
+    return { success: true, data, error: null }
+  } catch (error: any) {
     console.error('Unexpected error:', error)
-    return { data: null, error: error as Error }
+    return { success: false, data: null, error: error.message }
   }
 }
 
-/**
- * Get subscriber count (for showing on homepage)
- * 
- * @returns Total number of active subscribers
- */
-export async function getSubscriberCount() {
-  try {
-    const { count, error } = await supabase
-      .from('subscribers')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'active')
-
-    if (error) {
-      console.error('Error getting subscriber count:', error)
-      return { count: 0, error }
-    }
-
-    return { count: count || 0, error: null }
-  } catch (error) {
-    console.error('Unexpected error:', error)
-    return { count: 0, error: error as Error }
-  }
-}
+// ═══════════════════════════════════════════════════════════════
+// CONTENT CLICKS
+// ═══════════════════════════════════════════════════════════════
 
 /**
  * Increment click count for a piece of content
  * Used to track which TikTok videos, blog posts, etc. are most popular
- * 
- * @param contentType - Type of content (e.g., 'tiktok_embed')
+ * @param contentType - Type of content (e.g., 'tiktok_embed', 'youtube_video')
  * @param contentId - Unique ID of the content
+ * @returns Object with success status
  */
 export async function trackContentClick(
   contentType: string,
@@ -203,7 +192,7 @@ export async function trackContentClick(
       .select('*')
       .eq('content_type', contentType)
       .eq('content_id', contentId)
-      .single()
+      .maybeSingle()
 
     if (existing) {
       // Update existing record (increment clicks)
@@ -215,7 +204,12 @@ export async function trackContentClick(
         })
         .eq('id', existing.id)
 
-      if (error) console.error('Error updating content click:', error)
+      if (error) {
+        console.error('Error updating content click:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true, clicks: existing.clicks + 1 }
     } else {
       // Create new record
       const { error } = await supabase
@@ -225,13 +219,91 @@ export async function trackContentClick(
             content_type: contentType,
             content_id: contentId,
             clicks: 1,
+            last_clicked: new Date().toISOString(),
           },
         ])
 
-      if (error) console.error('Error creating content click:', error)
+      if (error) {
+        console.error('Error creating content click:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true, clicks: 1 }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Get content click stats (for internal analytics only)
+ * @param contentType - Type of content to filter by (optional)
+ * @returns Array of content with click counts
+ */
+export async function getContentClickStats(contentType?: string) {
+  try {
+    let query = supabase
+      .from('content_clicks')
+      .select('*')
+      .order('clicks', { ascending: false })
+
+    if (contentType) {
+      query = query.eq('content_type', contentType)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error getting content clicks:', error)
+      return { success: false, data: null, error: error.message }
+    }
+
+    return { success: true, data, error: null }
+  } catch (error: any) {
+    console.error('Unexpected error:', error)
+    return { success: false, data: null, error: error.message }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SURVEYS (FOR FUTURE USE)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Submit survey response
+ * @param question - Survey question
+ * @param answer - User's answer
+ * @param email - User's email (optional)
+ * @returns Object with success status and data/error
+ */
+export async function submitSurveyResponse(
+  question: string,
+  answer: string,
+  email?: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('surveys')
+      .insert([
+        {
+          question: question,
+          answer: answer,
+          email: email || null,
+        },
+      ])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error submitting survey:', error)
+      return { success: false, data: null, error: error.message }
+    }
+
+    return { success: true, data, error: null }
+  } catch (error: any) {
+    console.error('Unexpected error:', error)
+    return { success: false, data: null, error: error.message }
   }
 }
 
@@ -243,8 +315,8 @@ export async function trackContentClick(
  * Go to Supabase Dashboard > SQL Editor > New Query
  * Copy and paste each CREATE TABLE statement:
  * 
- * -- Subscribers table
- * CREATE TABLE subscribers (
+ * -- Subscribers table (PRIVATE - not exposed to public)
+ * CREATE TABLE IF NOT EXISTS subscribers (
  *   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
  *   email VARCHAR(255) UNIQUE NOT NULL,
  *   subscribed_at TIMESTAMP DEFAULT NOW(),
@@ -255,7 +327,7 @@ export async function trackContentClick(
  * );
  * 
  * -- Analytics events table
- * CREATE TABLE analytics_events (
+ * CREATE TABLE IF NOT EXISTS analytics_events (
  *   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
  *   event_name VARCHAR(100),
  *   event_data JSONB,
@@ -265,7 +337,7 @@ export async function trackContentClick(
  * );
  * 
  * -- Content clicks table
- * CREATE TABLE content_clicks (
+ * CREATE TABLE IF NOT EXISTS content_clicks (
  *   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
  *   content_type VARCHAR(50),
  *   content_id VARCHAR(100),
@@ -274,13 +346,21 @@ export async function trackContentClick(
  * );
  * 
  * -- Surveys table (for future use)
- * CREATE TABLE surveys (
+ * CREATE TABLE IF NOT EXISTS surveys (
  *   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
  *   question TEXT,
  *   answer TEXT,
  *   email VARCHAR(255),
  *   submitted_at TIMESTAMP DEFAULT NOW()
  * );
+ * 
+ * -- Row Level Security (RLS) - Keep subscriber data private
+ * ALTER TABLE subscribers ENABLE ROW LEVEL SECURITY;
+ * 
+ * -- Only service role can read subscribers (keeps it private)
+ * CREATE POLICY "Service role only" ON subscribers
+ *   FOR ALL
+ *   USING (auth.role() = 'service_role');
  * 
  * ═══════════════════════════════════════════════════════════════
  */

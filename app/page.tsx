@@ -26,6 +26,7 @@ import {
   trackMediaKitDownload,
   initializeAnalytics,
 } from "@/lib/analytics";
+import { saveSubscriber } from "@/lib/supabase"; // ← ADD THIS LINE
 
 // LOGO COMPONENTS
 function YouTubeLogo() {
@@ -67,16 +68,36 @@ export default function HomePage() {
     e.preventDefault();
     setEmailStatus("loading");
 
-    setTimeout(() => {
-      setEmailStatus("success");
-      setEmail("");
-      console.log("📊 Email signup:", email);
+    try {
+      // 1. Save to Supabase
+      const result = await saveSubscriber(email, "community_modal");
 
-      setTimeout(() => {
-        setShowEmailModal(false);
-        setEmailStatus("");
-      }, 2000);
-    }, 1000);
+      if (result.success) {
+        // 2. Track analytics
+        trackEmailSignup(email, "community_modal");
+
+        // 3. Show success
+        setEmailStatus("success");
+        setEmail("");
+
+        // 4. Close modal after 2 seconds
+        setTimeout(() => {
+          setShowEmailModal(false);
+          setEmailStatus("");
+        }, 2000);
+      } else {
+        // Handle errors
+        if (result.isDuplicate) {
+          setEmailStatus("duplicate");
+        } else {
+          setEmailStatus("error");
+          console.error("Error:", result.error);
+        }
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      setEmailStatus("error");
+    }
   };
 
   return (
@@ -248,24 +269,50 @@ export default function HomePage() {
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handleEmailSubmit} className="space-y-4">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your.email@example.com"
-                    required
-                    className="w-full px-6 py-4 border-2 border-gray-200 rounded-full focus:border-purple-500 focus:outline-none text-lg"
-                  />
+                <>
+                  <form onSubmit={handleEmailSubmit} className="space-y-4">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      required
+                      className="w-full px-6 py-4 border-2 border-gray-200 rounded-full focus:border-purple-500 focus:outline-none text-lg"
+                    />
 
-                  <button
-                    type="submit"
-                    disabled={emailStatus === "loading"}
-                    className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full font-semibold text-lg hover:opacity-90 transition-all disabled:opacity-50"
-                  >
-                    {emailStatus === "loading" ? "Joining..." : "Join Now! 💕"}
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      disabled={emailStatus === "loading"}
+                      className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full font-semibold text-lg hover:opacity-90 transition-all disabled:opacity-50"
+                    >
+                      {emailStatus === "loading"
+                        ? "Joining..."
+                        : "Join Now! 💕"}
+                    </button>
+                  </form>
+
+                  {emailStatus === "duplicate" && (
+                    <div className="text-center mt-4 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                      <p className="text-sm font-semibold text-yellow-800">
+                        You're already subscribed! 💚
+                      </p>
+                      <p className="text-xs text-yellow-600 mt-1">
+                        Check your email for past updates
+                      </p>
+                    </div>
+                  )}
+
+                  {emailStatus === "error" && (
+                    <div className="text-center mt-4 p-4 bg-red-50 rounded-xl border border-red-200">
+                      <p className="text-sm font-semibold text-red-800">
+                        Oops! Something went wrong 😕
+                      </p>
+                      <p className="text-xs text-red-600 mt-1">
+                        Please try again or refresh the page
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
 
               <button
@@ -673,17 +720,36 @@ function ContactForm() {
   });
   const [status, setStatus] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("loading");
 
-    // TODO: Connect to Supabase or email service
-    console.log("Partnership inquiry:", formData);
+    try {
+      // 1. Save email to Supabase
+      const result = await saveSubscriber(formData.email, "partnership_form");
 
-    setTimeout(() => {
-      setStatus("success");
-      setFormData({ name: "", email: "", company: "", message: "" });
-    }, 1000);
+      if (result.success || result.isDuplicate) {
+        // 2. Track analytics
+        trackPartnershipInquiry({
+          name: formData.name,
+          email: formData.email,
+          company: formData.company,
+        });
+
+        // 3. Show success
+        setStatus("success");
+        setFormData({ name: "", email: "", company: "", message: "" });
+
+        // TODO: Also send email notification to you
+        // This can be added later via Supabase Edge Functions
+      } else {
+        setStatus("error");
+        console.error("Error:", result.error);
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      setStatus("error");
+    }
   };
 
   return (
@@ -848,6 +914,22 @@ function ContactForm() {
             <p className="text-sm md:text-base text-gray-600 mt-2">
               I'll get back to you within 24-48 hours 💕
             </p>
+          </div>
+        ) : status === "error" ? (
+          <div className="text-center py-8 bg-red-50 rounded-xl">
+            <div className="text-4xl md:text-5xl mb-3">⚠️</div>
+            <p className="text-base md:text-lg font-semibold text-red-600">
+              Oops! Something went wrong.
+            </p>
+            <p className="text-sm md:text-base text-gray-600 mt-2">
+              Please try again or email me directly
+            </p>
+            <button
+              onClick={() => setStatus("")}
+              className="mt-4 px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors font-semibold"
+            >
+              Try Again
+            </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
