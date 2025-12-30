@@ -189,7 +189,7 @@ export default function HomePage() {
               icon={<YouTubeLogo />}
               label="YouTube Channel"
               subtitle="Painting tutorials & behind the scenes"
-              href="https://youtube.com/@samiya"
+              href="https://www.youtube.com/@samiyasheree"
               external
             />
 
