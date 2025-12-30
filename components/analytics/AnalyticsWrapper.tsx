@@ -8,10 +8,12 @@
  * - Microsoft Clarity
  * - TikTok Pixel
  * - Meta Pixel (Facebook/Instagram)
+ * - Pinterest Tag
+ * - LinkedIn Insight Tag
  *
  * It's loaded once in layout.tsx and runs on every page.
  *
- * UPDATED: Wrapped in Suspense to fix Next.js 14 build error
+ * UPDATED: Fixed variable names to match .env.local
  *
  * ═══════════════════════════════════════════════════════════════
  */
@@ -38,12 +40,14 @@ function AnalyticsTracker() {
 
 export default function AnalyticsWrapper() {
   // ─────────────────────────────────────────────────────────────
-  // GET ENVIRONMENT VARIABLES
+  // GET ENVIRONMENT VARIABLES (UPDATED NAMES!)
   // ─────────────────────────────────────────────────────────────
-  const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-  const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
-  const TIKTOK_PIXEL_ID = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID;
-  const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+  const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_ID;
+  const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_ID;
+  const TIKTOK_PIXEL_ID = process.env.NEXT_PUBLIC_AGENCY_TIKTOK_PIXEL_ID;
+  const META_PIXEL_ID = process.env.NEXT_PUBLIC_AGENCY_META_PIXEL_ID;
+  const PINTEREST_TAG_ID = process.env.NEXT_PUBLIC_AGENCY_PINTEREST_TAG_ID;
+  const LINKEDIN_TAG_ID = process.env.NEXT_PUBLIC_AGENCY_LINKEDIN_TAG_ID;
 
   return (
     <>
@@ -124,20 +128,95 @@ export default function AnalyticsWrapper() {
           ═══════════════════════════════════════════════════════
       */}
       {META_PIXEL_ID && (
-        <Script id="meta-pixel" strategy="afterInteractive">
-          {`
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '${META_PIXEL_ID}');
-            fbq('track', 'PageView');
-          `}
-        </Script>
+        <>
+          <Script id="meta-pixel" strategy="afterInteractive">
+            {`
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              fbq('init', '${META_PIXEL_ID}');
+              fbq('track', 'PageView');
+            `}
+          </Script>
+          <noscript>
+            <img
+              height="1"
+              width="1"
+              style={{ display: "none" }}
+              src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
+            />
+          </noscript>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════
+          PINTEREST TAG
+          ═══════════════════════════════════════════════════════
+      */}
+      {PINTEREST_TAG_ID && (
+        <>
+          <Script id="pinterest-tag" strategy="afterInteractive">
+            {`
+              !function(e){if(!window.pintrk){window.pintrk = function () {
+              window.pintrk.queue.push(Array.prototype.slice.call(arguments))};var
+              n=window.pintrk;n.queue=[],n.version="3.0";var
+              t=document.createElement("script");t.async=!0,t.src=e;var
+              r=document.getElementsByTagName("script")[0];
+              r.parentNode.insertBefore(t,r)}}("https://s.pinimg.com/ct/core.js");
+              pintrk('load', '${PINTEREST_TAG_ID}');
+              pintrk('page');
+            `}
+          </Script>
+          <noscript>
+            <img
+              height="1"
+              width="1"
+              style={{ display: "none" }}
+              alt=""
+              src={`https://ct.pinterest.com/v3/?event=init&tid=${PINTEREST_TAG_ID}&noscript=1`}
+            />
+          </noscript>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════
+          LINKEDIN INSIGHT TAG
+          ═══════════════════════════════════════════════════════
+      */}
+      {LINKEDIN_TAG_ID && (
+        <>
+          <Script id="linkedin-insight" strategy="afterInteractive">
+            {`
+              _linkedin_partner_id = "${LINKEDIN_TAG_ID}";
+              window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
+              window._linkedin_data_partner_ids.push(_linkedin_partner_id);
+              
+              (function(l) {
+                if (!l){window.lintrk = function(a,b){window.lintrk.q.push([a,b])};
+                window.lintrk.q=[]}
+                var s = document.getElementsByTagName("script")[0];
+                var b = document.createElement("script");
+                b.type = "text/javascript";b.async = true;
+                b.src = "https://snap.licdn.com/li.lms-analytics/insight.min.js";
+                s.parentNode.insertBefore(b, s);
+              })(window.lintrk);
+            `}
+          </Script>
+          <noscript>
+            <img
+              height="1"
+              width="1"
+              style={{ display: "none" }}
+              alt=""
+              src={`https://px.ads.linkedin.com/collect/?pid=${LINKEDIN_TAG_ID}&fmt=gif`}
+            />
+          </noscript>
+        </>
       )}
 
       {/* Warning if analytics not configured */}
@@ -145,6 +224,8 @@ export default function AnalyticsWrapper() {
         <Script id="analytics-warning" strategy="afterInteractive">
           {`
             console.warn('⚠️ Analytics not fully configured. Add tracking IDs to .env.local');
+            console.log('GA4:', '${GA_MEASUREMENT_ID || "NOT SET"}');
+            console.log('Clarity:', '${CLARITY_PROJECT_ID || "NOT SET"}');
           `}
         </Script>
       )}
