@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://iamashleyhartley.com",
-    title: "Ashley Hartley | Founder, Pilates & Faith",
+    title: "IamAshleyHartley",
     description:
       "Atlanta-based creator, inventor, and Hot Mat Pilates lover. Faith, founderhood, and real life.",
     siteName: "Ashley Hartley",
