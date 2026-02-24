@@ -44,10 +44,10 @@ export default function AnalyticsWrapper() {
   // ─────────────────────────────────────────────────────────────
   const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_ID;
   const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_ID;
-  const TIKTOK_PIXEL_ID = process.env.NEXT_PUBLIC_AGENCY_TIKTOK_PIXEL_ID;
-  const META_PIXEL_ID = process.env.NEXT_PUBLIC_AGENCY_META_PIXEL_ID;
-  const PINTEREST_TAG_ID = process.env.NEXT_PUBLIC_AGENCY_PINTEREST_TAG_ID;
-  const LINKEDIN_TAG_ID = process.env.NEXT_PUBLIC_AGENCY_LINKEDIN_TAG_ID;
+  const TIKTOK_PIXEL_ID = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID;
+  const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+  const PINTEREST_TAG_ID = process.env.NEXT_PUBLIC_PINTEREST_PIXEL_ID;
+  const LINKEDIN_TAG_ID = process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID;
 
   return (
     <>
