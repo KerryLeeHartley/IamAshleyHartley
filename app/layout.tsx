@@ -78,7 +78,7 @@ export const metadata: Metadata = {
   // Twitter/X card
   twitter: {
     card: "summary_large_image",
-    title: "Ashley Hartley | Founder, Pilates & Faith",
+    title: "IamAshleyHartley",
     description:
       "Atlanta-based creator, inventor, and Hot Mat Pilates lover. Faith, founderhood, and real life.",
     images: ["/og-image.jpg"],
