@@ -541,21 +541,19 @@ export default async function VlogPostPage({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 6,
-                padding: "7px 14px",
+                justifyContent: "center",
+                width: 36,
+                height: 36,
                 background: "rgba(255,255,255,0.85)",
                 backdropFilter: "blur(10px)",
                 border: "1.5px solid rgba(192,57,43,0.22)",
-                borderRadius: 100,
+                borderRadius: "50%",
                 color: "#C0392B",
                 textDecoration: "none",
-                fontSize: "0.72rem",
-                fontWeight: 700,
                 transition: "all 0.25s ease",
               }}
             >
               {s.icon}
-              {s.name}
             </a>
           ))}
         </div>
