@@ -1,15 +1,3 @@
-// ═══════════════════════════════════════════════════════════════
-// SANITY SCHEMA: vlogPost
-// FILE: sanity/schemaTypes/vlogPost.ts
-// ═══════════════════════════════════════════════════════════════
-//
-// CHANGES FROM ORIGINAL:
-//   + Added 'slug' field → needed for /vlog/[slug] URL routing
-//   + Added 'productLinks' array → "Shop This Video" section
-//     Each product link has: name, url, description
-//
-// ═══════════════════════════════════════════════════════════════
-
 import { defineField, defineType, defineArrayMember } from 'sanity'
 
 export const vlogPostType = defineType({
@@ -24,16 +12,12 @@ export const vlogPostType = defineType({
       validation: (Rule) => Rule.required(),
     }),
 
-    // ── NEW: Slug field ────────────────────────────────────────
-    // This creates the URL for the vlog landing page.
-    // e.g. title "Church Day Vlog" → slug "church-day-vlog"
-    //      → URL becomes /vlog/church-day-vlog
     defineField({
       name: 'slug',
       title: 'Slug (URL)',
       type: 'slug',
       options: { source: 'title', maxLength: 96 },
-      description: 'Auto-generated from title. Used for the vlog landing page URL.',
+      description: 'Auto-generated from title. Click Generate.',
       validation: (Rule) => Rule.required(),
     }),
 
@@ -44,6 +28,7 @@ export const vlogPostType = defineType({
       description: 'Paste the full YouTube URL e.g. https://www.youtube.com/watch?v=ABC123',
       validation: (Rule) => Rule.required(),
     }),
+
     defineField({
       name: 'thumbnail',
       title: 'Custom Thumbnail (optional)',
@@ -51,6 +36,7 @@ export const vlogPostType = defineType({
       options: { hotspot: true },
       description: 'Leave blank to auto-use the YouTube thumbnail',
     }),
+
     defineField({
       name: 'category',
       title: 'Category',
@@ -65,36 +51,90 @@ export const vlogPostType = defineType({
         layout: 'radio',
       },
     }),
+
     defineField({
       name: 'publishedAt',
       title: 'Published Date',
       type: 'datetime',
       initialValue: () => new Date().toISOString(),
     }),
+
+    // ── DESCRIPTION / BLOG SECTION ────────────────────────────
+    // Rich text editor — shown on the page above the transcript.
+    //
+    // HOW TO ADD INLINE AFFILIATE LINKS:
+    //   1. Type your description text
+    //   2. Highlight the product/word you want to link
+    //   3. Click the link 🔗 icon in the toolbar
+    //   4. Paste your affiliate URL
+    //   5. Toggle "Open in new tab" ON → Publish
+    //
+    // Use this for:
+    //   • "In this vlog I visited [church name] and wore [outfit link]"
+    //   • Key moments / what to expect in the video
+    //   • Pilates tips, faith reflections, founder insights
     defineField({
-      name: 'transcript',
-      title: 'Transcript / Notes',
-      type: 'text',
-      rows: 8,
-      description: 'Paste the video transcript here for SEO — this gets indexed by Google',
+      name: 'description',
+      title: '📝 Description / Blog Section',
+      type: 'array',
+      description: 'Rich text shown above the transcript. Add your video summary, inline affiliate links, key moments.',
+      of: [
+        defineArrayMember({
+          type: 'block',
+          styles: [
+            { title: 'Normal', value: 'normal' },
+            { title: 'Heading', value: 'h2' },
+            { title: 'Subheading', value: 'h3' },
+          ],
+          lists: [
+            { title: 'Bullet', value: 'bullet' },
+            { title: 'Numbered', value: 'number' },
+          ],
+          marks: {
+            decorators: [
+              { title: 'Bold', value: 'strong' },
+              { title: 'Italic', value: 'em' },
+            ],
+            annotations: [
+              {
+                name: 'link',
+                type: 'object',
+                title: 'Link',
+                fields: [
+                  defineField({
+                    name: 'href',
+                    type: 'url',
+                    title: 'URL',
+                    validation: (Rule) =>
+                      Rule.uri({ allowRelative: false, scheme: ['http', 'https'] }),
+                  }),
+                  defineField({
+                    name: 'blank',
+                    type: 'boolean',
+                    title: 'Open in new tab?',
+                    initialValue: true,
+                  }),
+                ],
+              },
+            ],
+          },
+        }),
+      ],
     }),
 
-    // ── NEW: Product Links ─────────────────────────────────────
-    // Each item Ashley mentions in the video gets an entry here.
-    // Shows up as a "Shop This Video" section on the landing page.
-    // Perfect for affiliate links!
-    //
-    // HOW TO USE IN SANITY:
-    //   1. Publish a vlog post
-    //   2. Scroll to "Product Links" section
-    //   3. Click "Add item"
-    //   4. Fill in product name, affiliate URL, and short description
-    //   5. Publish — links appear on the vlog landing page
+    defineField({
+      name: 'transcript',
+      title: '🎙️ Full Transcript (SEO)',
+      type: 'text',
+      rows: 10,
+      description: 'Paste raw YouTube auto-transcript here. Shown collapsed on page. Google indexes it for SEO.',
+    }),
+
     defineField({
       name: 'productLinks',
-      title: 'Product Links (Shop This Video)',
+      title: '🛍️ Product Links (Shop This Video)',
       type: 'array',
-      description: 'Add affiliate/product links mentioned in this video',
+      description: 'Affiliate/product links shown as clickable cards on the landing page',
       of: [
         defineArrayMember({
           type: 'object',
@@ -107,7 +147,7 @@ export const vlogPostType = defineType({
             }),
             defineField({
               name: 'url',
-              title: 'Link (affiliate URL)',
+              title: 'Affiliate URL',
               type: 'url',
               validation: (Rule) => Rule.required(),
             }),
@@ -115,7 +155,7 @@ export const vlogPostType = defineType({
               name: 'description',
               title: 'Short Description (optional)',
               type: 'string',
-              description: 'e.g. "The mat I use in every class" or "20% off with code ASHLEY"',
+              description: 'e.g. "The mat I use every class" or "20% off with code ASHLEY"',
             }),
           ],
           preview: {
@@ -132,19 +172,15 @@ export const vlogPostType = defineType({
       description: 'Toggle on to feature this video in the homepage Vlogs carousel',
       initialValue: false,
     }),
+
     defineField({
       name: 'order',
       title: 'Display Order',
       type: 'number',
-      description: 'Lower numbers appear first in the carousel',
       initialValue: 0,
     }),
   ],
   preview: {
-    select: {
-      title: 'title',
-      subtitle: 'category',
-      media: 'thumbnail',
-    },
+    select: { title: 'title', subtitle: 'category', media: 'thumbnail' },
   },
 })

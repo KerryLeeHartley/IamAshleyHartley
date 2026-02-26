@@ -1016,7 +1016,7 @@ export default function HomeClient({
         {/* VLOGS CAROUSEL */}
         {vlogs.length > 0 && (
           <section className="a3" style={{ width: "100%" }}>
-            <SectionHeader label="Latest Vlogs" seeAllHref="/blog" />
+            <SectionHeader label="Latest Vlogs" seeAllHref="/vlog" />
             <div
               className="carousel"
               style={{
