@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { urlFor } from "@/lib/sanity"
+import { urlFor } from "@/lib/sanity";
 import EmailSignupForm from "@/components/EmailSignupForm";
 
 // ─────────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ const socialLinks = [
   },
   {
     name: "LinkedIn",
-    url: "https://linkedin.com/in/iamashleyhartley",
+    url: "https://www.linkedin.com/in/hartleyashley/",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -312,7 +312,9 @@ function VlogCard({ vlog }: { vlog: VlogPost }) {
     : getYouTubeThumbnail(videoId);
 
   // Link to vlog landing page if slug exists, otherwise fall back to YouTube
-  const href = vlog.slug?.current ? `/vlog/${vlog.slug.current}` : vlog.youtubeUrl;
+  const href = vlog.slug?.current
+    ? `/vlog/${vlog.slug.current}`
+    : vlog.youtubeUrl;
   const isExternal = !vlog.slug?.current;
 
   return (
