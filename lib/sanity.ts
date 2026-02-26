@@ -26,7 +26,7 @@ export async function getLatestVlog() {
 // Featured vlogs for carousel
 export async function getFeaturedVlogs() {
   return client.fetch(
-    `*[_type == "vlogPost" && featuredOnHomepage == true] | order(order asc) {
+    `*[_type == "vlogPost" && featuredOnHomepage == true] | order(publishedAt desc) {
       _id, title, youtubeUrl, thumbnail, category
     }`
   )
@@ -35,7 +35,7 @@ export async function getFeaturedVlogs() {
 // Featured blog posts for carousel
 export async function getFeaturedBlogPosts() {
   return client.fetch(
-    `*[_type == "blogPost" && featuredOnHomepage == true] | order(order asc) {
+    `*[_type == "blogPost" && featuredOnHomepage == true] | order(publishedAt desc) {
       _id, title, coverImage, category, slug
     }`
   )
