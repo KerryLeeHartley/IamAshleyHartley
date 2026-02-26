@@ -18,7 +18,7 @@ export function urlFor(source: SanityImageSource) {
 export async function getLatestVlog() {
   return client.fetch(
     `*[_type == "vlogPost"] | order(publishedAt desc) [0] {
-      _id, title, youtubeUrl, thumbnail, category
+      _id, title, youtubeUrl, thumbnail, category, slug
     }`
   )
 }
@@ -27,7 +27,7 @@ export async function getLatestVlog() {
 export async function getFeaturedVlogs() {
   return client.fetch(
     `*[_type == "vlogPost" && featuredOnHomepage == true] | order(publishedAt desc) {
-      _id, title, youtubeUrl, thumbnail, category
+      _id, title, youtubeUrl, thumbnail, category, slug
     }`
   )
 }

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { urlFor } from "@/lib/sanity";
+import { urlFor } from "@/lib/sanity"
 import EmailSignupForm from "@/components/EmailSignupForm";
 
 // ─────────────────────────────────────────────────────────────
@@ -14,6 +14,7 @@ interface VlogPost {
   youtubeUrl: string;
   thumbnail?: any;
   category?: string;
+  slug?: { current: string };
 }
 
 interface BlogPost {
@@ -264,9 +265,6 @@ function SectionHeader({
   seeAllHref: string;
   seeAllLabel?: string;
 }) {
-  // If the href starts with http, it's external — use <a> and open in new tab
-  const isExternal = seeAllHref.startsWith("http");
-
   return (
     <div
       style={{
@@ -289,33 +287,17 @@ function SectionHeader({
       >
         {label}
       </p>
-      {isExternal ? (
-        <a
-          href={seeAllHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            fontSize: "0.75rem",
-            color: "#7A3030",
-            textDecoration: "none",
-            fontWeight: 600,
-          }}
-        >
-          {seeAllLabel}
-        </a>
-      ) : (
-        <Link
-          href={seeAllHref}
-          style={{
-            fontSize: "0.75rem",
-            color: "#7A3030",
-            textDecoration: "none",
-            fontWeight: 600,
-          }}
-        >
-          {seeAllLabel}
-        </Link>
-      )}
+      <Link
+        href={seeAllHref}
+        style={{
+          fontSize: "0.75rem",
+          color: "#7A3030",
+          textDecoration: "none",
+          fontWeight: 600,
+        }}
+      >
+        {seeAllLabel}
+      </Link>
     </div>
   );
 }
@@ -329,11 +311,15 @@ function VlogCard({ vlog }: { vlog: VlogPost }) {
     ? urlFor(vlog.thumbnail).width(400).height(225).url()
     : getYouTubeThumbnail(videoId);
 
+  // Link to vlog landing page if slug exists, otherwise fall back to YouTube
+  const href = vlog.slug?.current ? `/vlog/${vlog.slug.current}` : vlog.youtubeUrl;
+  const isExternal = !vlog.slug?.current;
+
   return (
     <a
-      href={vlog.youtubeUrl}
-      target="_blank"
-      rel="noopener noreferrer"
+      href={href}
+      target={isExternal ? "_blank" : undefined}
+      rel={isExternal ? "noopener noreferrer" : undefined}
       className="vlog-card"
       style={{
         flexShrink: 0,
@@ -899,26 +885,6 @@ export default function HomeClient({
           >
             ✦ Atlanta, GA ✦
           </p>
-
-          {/* WORK WITH ME - small pill link under location */}
-          <Link
-            href="/work-with-me"
-            className="ah-btn-p"
-            style={{
-              fontSize: "0.72rem",
-              fontWeight: 700,
-              color: "white",
-              textDecoration: "none",
-              letterSpacing: "0.08em",
-              background: "linear-gradient(135deg, #C0392B 0%, #8B1A1A 100%)",
-              padding: "7px 20px",
-              borderRadius: 100,
-              marginTop: 4,
-              boxShadow: "0 4px 14px rgba(192,57,43,0.4)",
-            }}
-          >
-            Work With Me ✨
-          </Link>
         </section>
 
         {/* SOCIAL */}
@@ -1050,10 +1016,7 @@ export default function HomeClient({
         {/* VLOGS CAROUSEL */}
         {vlogs.length > 0 && (
           <section className="a3" style={{ width: "100%" }}>
-            <SectionHeader
-              label="Latest Vlogs"
-              seeAllHref="https://www.youtube.com/@Iamashleyhartley"
-            />
+            <SectionHeader label="Latest Vlogs" seeAllHref="/blog" />
             <div
               className="carousel"
               style={{
@@ -1115,6 +1078,39 @@ export default function HomeClient({
             </div>
           </section>
         )}
+
+        {/* WORK WITH ME BUTTON */}
+        <section className="a6" style={{ width: "100%", padding: "0 24px" }}>
+          <Link
+            href="/work-with-me"
+            className="ah-btn-p"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 5,
+              width: "100%",
+              padding: "20px 32px",
+              borderRadius: 100,
+              textDecoration: "none",
+              textAlign: "center",
+              background: "linear-gradient(135deg, #C0392B 0%, #8B1A1A 100%)",
+              color: "white",
+              boxShadow: "0 8px 28px rgba(192,57,43,0.42)",
+              transition: "all 0.25s ease",
+            }}
+          >
+            <span style={{ fontSize: "1rem", fontWeight: 700 }}>
+              Work With Me
+            </span>
+            <span
+              style={{ fontSize: "0.78rem", fontWeight: 400, opacity: 0.65 }}
+            >
+              Brand partnerships & collaborations
+            </span>
+          </Link>
+        </section>
 
         {/* EMAIL SIGNUP */}
         <section
